@@ -18,35 +18,22 @@ pub trait Executor {
     fn exec(&self, req: Request);
 }
 
-impl<F> Executor for F
-where
-    F: Fn(Request),
-{
-    fn exec(&self, req: Request) {
-        self(req)
-    }
-}
-
-trait DynExecutor {
-    fn call(&self, req: Request);
-}
-
 struct ErasedExecutor<E> {
     executor: E,
 }
 
-impl<E> DynExecutor for ErasedExecutor<E>
+impl<E> Executor for ErasedExecutor<E>
 where
-    E: Executor,
+    E: Fn(Request),
 {
-    fn call(&self, req: Request) {
-        self.executor.exec(req);
+    fn exec(&self, req: Request) {
+        (self.executor)(req);
     }
 }
 
 #[derive(Default)]
 pub struct Router {
-    routes: HashMap<&'static str, Box<dyn DynExecutor>>,
+    routes: HashMap<&'static str, Box<dyn Executor>>,
 }
 
 impl Router {
@@ -68,7 +55,7 @@ impl Router {
     }
 
     pub fn run(&self, pat: &'static str, req: Request) {
-        self.routes[pat].call(req);
+        self.routes[pat].exec(req);
     }
 }
 
